@@ -3,301 +3,253 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <title>DrillData — Sistema Inteligente de Sondagem</title>
-  
-  <!-- Bibliotecas para Gerar Excel Formatado e PDF -->
+  <title>DrillData — Boletim de Sondagem Mineral</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 16px; max-width: 580px; margin: 0 auto; }
-    h2 { color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-    .status { font-size: 0.8rem; padding: 6px 12px; border-radius: 20px; display: inline-block; margin-bottom: 16px; font-weight: 600; }
-    .online { background: #14532d; color: #4ade80; border: 1px solid #16a34a; }
-    .offline { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 16px; max-width: 650px; margin: 0 auto; }
+    h2 { color: #38bdf8; margin-bottom: 2px; }
+    .subtitle { color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px; }
     form { display: flex; flex-direction: column; gap: 12px; background: #1e293b; padding: 18px; border-radius: 12px; border: 1px solid #334155; }
     .row { display: flex; gap: 10px; }
     .row > div { flex: 1; }
-    label { font-size: 0.85rem; color: #94a3b8; font-weight: 500; display: block; margin-bottom: 4px; }
-    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.95rem; box-sizing: border-box; }
-    button { background: #0284c7; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-    button:active { background: #0369a1; }
-    .btn-gps { background: #334155; padding: 8px; font-size: 0.85rem; border-radius: 6px; border: 1px solid #475569; color: #38bdf8; margin-top: 4px; cursor: pointer; width: 100%; }
+    label { font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.9rem; box-sizing: border-box; }
+    button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
+    .calc-box { background: #0f172a; border: 1px solid #0284c7; padding: 10px; border-radius: 6px; text-align: center; color: #38bdf8; font-weight: bold; font-size: 0.9rem; }
+    .export-box { background: #1e293b; padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .btn-excel { background: #15803d; }
+    .btn-pdf { background: #b91c1c; }
+    .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #334155; font-size: 0.85rem; }
     
-    /* Painel de Exportação e Relatórios */
-    .export-box { background: #1e293b; padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
-    .btn-excel { background: #15803d; color: white; padding: 12px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
-    .btn-pdf { background: #b91c1c; color: white; padding: 12px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
-    .btn-clear { background: #475569; color: #cbd5e1; padding: 8px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 0.8rem; margin-top: 6px; }
-
-    .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #334155; font-size: 0.9rem; }
-    .card strong { color: #38bdf8; }
-    .card img { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid #475569; }
-    .tag { font-size: 0.75rem; background: #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; margin-right: 4px; display: inline-block; margin-top: 4px; }
-
-    /* Layout do PDF Oculto */
-    #pdfTemplate { display: none; background: #ffffff; color: #000000; padding: 20px; font-family: Arial, sans-serif; }
-    #pdfTemplate h1 { color: #0f172a; border-bottom: 2px solid #0284c7; padding-bottom: 5px; font-size: 20px; }
-    #pdfTemplate table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
-    #pdfTemplate th { background: #0f172a; color: #ffffff; padding: 6px; border: 1px solid #cbd5e1; text-align: left; }
-    #pdfTemplate td { padding: 6px; border: 1px solid #cbd5e1; }
-    .pdf-photo { max-width: 200px; height: auto; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px; }
-    .pdf-summary { display: flex; justify-content: space-between; background: #f1f5f9; padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 12px; font-weight: bold; }
+    /* Layout do PDF */
+    #pdfTemplate { display: none; background: #fff; color: #000; padding: 15px; font-family: Arial, sans-serif; }
+    #pdfTemplate table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
+    #pdfTemplate th { background: #0f172a; color: #fff; padding: 5px; border: 1px solid #cbd5e1; }
+    #pdfTemplate td { padding: 4px; border: 1px solid #cbd5e1; text-align: center; }
   </style>
 </head>
 <body>
 
-  <h2>⛏️ DrillData — Praça de Sondagem</h2>
-  <div id="netStatus" class="status online">🟢 Conectado — Pronto para sincronizar</div>
+  <h2>⛏️ DrillData — Campo</h2>
+  <div class="subtitle">Sistema de Coleta e Emissão de Boletins Diários de Sondagem</div>
 
   <form id="drillForm">
+    <!-- Cabeçalho do Furo -->
     <div class="row">
       <div>
-        <label>Furo</label>
-        <input type="text" id="furo" placeholder="Ex: DDH-024" required>
+        <label>Projeto / Cliente</label>
+        <input type="text" id="projeto" value="Mineração Santa Rita" required>
       </div>
       <div>
-        <label>Sonda / Máquina</label>
-        <input type="text" id="maquina" placeholder="Ex: CS14" required>
+        <label>Furo</label>
+        <input type="text" id="furo" placeholder="DDH-024" required>
       </div>
     </div>
 
+    <div class="row">
+      <div>
+        <label>Sonda / Equipamento</label>
+        <input type="text" id="maquina" placeholder="CS14" required>
+      </div>
+      <div>
+        <label>Sondador Responsável</label>
+        <input type="text" id="sondador" value="Natanael Souza" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Data</label>
+        <input type="date" id="dataOperacao" required>
+      </div>
+      <div>
+        <label>Horário (Início - Fim)</label>
+        <div style="display:flex; gap:4px;">
+          <input type="time" id="horaIni" required>
+          <input type="time" id="horaFim" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados da Manobra -->
     <div class="row">
       <div>
         <label>Prof. Inicial (m)</label>
-        <input type="number" step="0.01" id="profInicial" placeholder="0.00" required>
+        <input type="number" step="0.01" id="profInicial" oninput="calcularAvanco()" required>
       </div>
       <div>
         <label>Prof. Final (m)</label>
-        <input type="number" step="0.01" id="profFinal" placeholder="0.00" required>
+        <input type="number" step="0.01" id="profFinal" oninput="calcularAvanco()" required>
       </div>
     </div>
 
     <div class="row">
       <div>
-        <label>Barrilete</label>
-        <select id="barrilete">
-          <option value="HQ">HQ</option>
-          <option value="NQ">NQ</option>
-          <option value="BQ">BQ</option>
-          <option value="HQ3">HQ3</option>
-          <option value="NQ3">NQ3</option>
-        </select>
+        <label>Testemunho Rec. (m)</label>
+        <input type="number" step="0.01" id="recMetros" oninput="calcularAvanco()" required>
       </div>
       <div>
-        <label>Recuperação (%)</label>
-        <input type="number" step="1" id="recuperacao" placeholder="Ex: 95">
+        <label>Nº Caixa Atual</label>
+        <input type="number" id="numCaixa" placeholder="Ex: 1" required>
       </div>
+    </div>
+
+    <!-- Indicadores Automáticos -->
+    <div class="calc-box" id="displayCalc">
+      Avanço: 0.00 m | Recuperação: 0.0%
     </div>
 
     <div class="row">
       <div>
         <label>Horas Parado (h)</label>
-        <input type="number" step="0.5" id="horasParado" placeholder="0" value="0">
+        <input type="number" step="0.5" id="horasParado" value="0">
       </div>
       <div>
         <label>Motivo da Parada</label>
         <select id="motivoParada">
           <option value="Nenhuma">Nenhuma</option>
+          <option value="Troca de Broca">Troca de Broca</option>
           <option value="Manutenção Mecânica">Manutenção Mecânica</option>
           <option value="Aguardando Água">Aguardando Água</option>
           <option value="Chuva / Clima">Chuva / Clima</option>
-          <option value="Troca de Broca">Troca de Broca</option>
-          <option value="Outros">Outros</option>
         </select>
       </div>
     </div>
 
     <div class="row">
       <div>
-        <label>Diesel (L)</label>
-        <input type="number" step="1" id="diesel" placeholder="0">
+        <label>Diesel Consumido (L)</label>
+        <input type="number" id="diesel" value="0">
       </div>
       <div>
         <label>Coordenadas (GPS)</label>
-        <input type="text" id="coords" placeholder="Lat, Long" readonly>
-        <button type="button" class="btn-gps" onclick="capturarGPS()">📍 Capturar Posição</button>
+        <input type="text" id="coords" placeholder="Lat, Long">
       </div>
     </div>
 
     <div>
-      <label>Foto da Caixa de Testemunhos</label>
-      <input type="file" id="foto" accept="image/*" capture="environment">
+      <label>Observação Litológica / Operacional</label>
+      <textarea id="obs" rows="2" placeholder="Descreva a rocha, fraturamento ou alteração..."></textarea>
     </div>
 
-    <div>
-      <label>Observações do Auxiliar/Sondador</label>
-      <textarea id="obs" rows="2" placeholder="Fraturas, perda de água, alteração da rocha..."></textarea>
-    </div>
-
-    <button type="submit">💾 Salvar Registro no Dispositivo</button>
+    <button type="submit">💾 Salvar Manobra no Dispositivo</button>
   </form>
 
-  <!-- Painel de Gerenciamento e Emissão de Relatórios -->
   <div class="export-box">
-    <label style="color:#f8fafc; font-weight:bold;">📄 Gerar Documentos & Relatórios</label>
-    <button type="button" class="btn-excel" onclick="gerarExcel()">📊 Baixar Planilha Excel (.xlsx)</button>
-    <button type="button" class="btn-pdf" onclick="gerarPDF()">📄 Baixar Boletim em PDF (.pdf)</button>
-    <button type="button" class="btn-clear" onclick="limparBanco()">🗑️ Apagar Registros Locais</button>
+    <label style="font-weight:bold;">📄 Gerar Documentos Oficiais</label>
+    <button type="button" class="btn-excel" onclick="gerarExcel()">📊 Exportar Planilha Iluminada (.xlsx)</button>
+    <button type="button" class="btn-pdf" onclick="gerarPDF()">📄 Exportar Relatório PDF (.pdf)</button>
   </div>
 
-  <h3 style="margin-top: 24px; color: #94a3b8; font-size: 1rem;">Boletins Registrados no Aparelho</h3>
+  <h3 style="margin-top: 20px; color: #94a3b8;">Manobras Registradas</h3>
   <div id="recordsList"></div>
 
-  <!-- Template Oculto Utilizado para a Renderização do PDF -->
+  <!-- Template para PDF -->
   <div id="pdfTemplate">
-    <h1>⛏️ DrillData — Relatório Operacional de Sondagem</h1>
-    <p style="font-size: 10px; color: #64748b; margin-top: -5px;">Gerado automaticamente pelo PWA DrillData</p>
-    
-    <div class="pdf-summary">
-      <span id="pdfTotalMetros">Total Perfurado: 0 m</span>
-      <span id="pdfTotalHoras">Total Parado: 0 h</span>
-      <span id="pdfTotalDiesel">Consumo Diesel: 0 L</span>
-    </div>
-
+    <h2 style="color:#0f172a; text-align:center; margin-bottom:5px;">DRILLDATA — BOLETIM DIÁRIO DE SONDAGEM</h2>
+    <div id="pdfHeaderInfo" style="margin-bottom:10px; font-size:10px; background:#f1f5f9; padding:8px; border-radius:4px;"></div>
     <table>
       <thead>
         <tr>
+          <th>Item</th>
           <th>Data/Hora</th>
-          <th>Furo</th>
-          <th>Sonda</th>
           <th>De (m)</th>
           <th>Até (m)</th>
           <th>Avanço</th>
-          <th>Barrilete</th>
-          <th>Rec.</th>
+          <th>Acumul.</th>
+          <th>Recup.</th>
+          <th>Nº Cx</th>
           <th>Parada</th>
-          <th>Obs / Foto</th>
+          <th>Observação Litológica</th>
         </tr>
       </thead>
-      <tbody id="pdfTableBody">
-      </tbody>
+      <tbody id="pdfTableBody"></tbody>
     </table>
   </div>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+    // Define data padrão de hoje no formulário
+    document.getElementById('dataOperacao').valueAsDate = new Date();
+
+    function calcularAvanco() {
+      const pIni = parseFloat(document.getElementById('profInicial').value) || 0;
+      const pFin = parseFloat(document.getElementById('profFinal').value) || 0;
+      const recM = parseFloat(document.getElementById('recMetros').value) || 0;
+      
+      const avanco = pFin - pIni;
+      const recPerc = avanco > 0 ? (recM / avanco) * 100 : 0;
+
+      document.getElementById('displayCalc').innerHTML = 
+        `Avanço Manobra: <b>${avanco.toFixed(2)} m</b> | Recuperação: <b>${recPerc.toFixed(1)}%</b>`;
     }
 
-    function updateStatus() {
-      const statusDiv = document.getElementById('netStatus');
-      if (navigator.onLine) {
-        statusDiv.className = 'status online';
-        statusDiv.textContent = '🟢 Online — Sincronização pronta';
-      } else {
-        statusDiv.className = 'status offline';
-        statusDiv.textContent = '🔴 Offline — Modo de Campo (IndexedDB Ativo)';
-      }
-    }
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    updateStatus();
-
-    function capturarGPS() {
-      const inputCoords = document.getElementById('coords');
-      if ('geolocation' in navigator) {
-        inputCoords.placeholder = "Obtendo GPS...";
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            inputCoords.value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
-          },
-          (err) => {
-            alert('Não foi possível obter GPS.');
-            inputCoords.placeholder = "Erro no GPS";
-          },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      }
-    }
-
-    // Configuração do IndexedDB
     let db;
-    const request = indexedDB.open('DrillDataDB', 2);
-
+    const request = indexedDB.open('DrillDataDB', 3);
     request.onupgradeneeded = (e) => {
       db = e.target.result;
       if (!db.objectStoreNames.contains('boletins')) {
         db.createObjectStore('boletins', { keyPath: 'id', autoIncrement: true });
       }
     };
+    request.onsuccess = (e) => { db = e.target.result; renderRecords(); };
 
-    request.onsuccess = (e) => {
-      db = e.target.result;
-      renderRecords();
-    };
-
-    function lerImagem(file) {
-      return new Promise((resolve) => {
-        if (!file) resolve(null);
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // Salvar Registro Local
-    document.getElementById('drillForm').addEventListener('submit', async (e) => {
+    document.getElementById('drillForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      
-      const fileInput = document.getElementById('foto');
-      let fotoBase64 = null;
-      if (fileInput.files.length > 0) {
-        fotoBase64 = await lerImagem(fileInput.files[0]);
-      }
-
-      const pInicial = parseFloat(document.getElementById('profInicial').value) || 0;
-      const pFinal = parseFloat(document.getElementById('profFinal').value) || 0;
-      const avanco = (pFinal - pInicial).toFixed(2);
+      const pIni = parseFloat(document.getElementById('profInicial').value) || 0;
+      const pFin = parseFloat(document.getElementById('profFinal').value) || 0;
+      const recM = parseFloat(document.getElementById('recMetros').value) || 0;
+      const avanco = pFin - pIni;
 
       const record = {
+        projeto: document.getElementById('projeto').value,
         furo: document.getElementById('furo').value,
         maquina: document.getElementById('maquina').value,
-        profInicial: pInicial,
-        profFinal: pFinal,
-        avanco: parseFloat(avanco),
-        barrilete: document.getElementById('barrilete').value,
-        recuperacao: parseFloat(document.getElementById('recuperacao').value) || 0,
+        sondador: document.getElementById('sondador').value,
+        data: document.getElementById('dataOperacao').value,
+        horaIni: document.getElementById('horaIni').value,
+        horaFim: document.getElementById('horaFim').value,
+        profInicial: pIni,
+        profFinal: pFin,
+        avanco: avanco,
+        recMetros: recM,
+        recPerc: avanco > 0 ? (recM / avanco) * 100 : 0,
+        numCaixa: parseInt(document.getElementById('numCaixa').value) || 1,
         horasParado: parseFloat(document.getElementById('horasParado').value) || 0,
         motivoParada: document.getElementById('motivoParada').value,
         diesel: parseFloat(document.getElementById('diesel').value) || 0,
         coords: document.getElementById('coords').value,
-        obs: document.getElementById('obs').value,
-        foto: fotoBase64,
-        timestamp: new Date().toLocaleString('pt-BR')
+        obs: document.getElementById('obs').value
       };
 
       const tx = db.transaction('boletins', 'readwrite');
       tx.objectStore('boletins').add(record);
       tx.oncomplete = () => {
-        document.getElementById('drillForm').reset();
+        // Prepara próximo avanço preenchendo a Prof Inicial com a Prof Final da manobra anterior
+        document.getElementById('profInicial').value = pFin;
+        document.getElementById('profFinal').value = '';
+        document.getElementById('recMetros').value = '';
+        document.getElementById('obs').value = '';
+        calcularAvanco();
         renderRecords();
       };
     });
 
-    // Renderização da Interface
     function renderRecords() {
       const list = document.getElementById('recordsList');
       list.innerHTML = '';
+      let acm = 0;
       const tx = db.transaction('boletins', 'readonly');
       tx.objectStore('boletins').openCursor().onsuccess = (e) => {
         const cursor = e.target.result;
         if (cursor) {
           const item = cursor.value;
+          acm += item.avanco;
           list.innerHTML += `
             <div class="card">
-              <strong>${item.furo}</strong> (${item.maquina}) — <span style="color:#4ade80">+${item.avanco} m</span><br>
-              <small>De ${item.profInicial}m a ${item.profFinal}m | Barrilete: ${item.barrilete}</small><br>
-              <div>
-                <span class="tag">Recup: ${item.recuperacao}%</span>
-                <span class="tag">Parada: ${item.horasParado}h (${item.motivoParada})</span>
-                <span class="tag">Diesel: ${item.diesel}L</span>
-              </div>
-              ${item.coords ? `<small style="color:#38bdf8">📍 GPS: ${item.coords}</small><br>` : ''}
-              ${item.obs ? `<small style="color:#cbd5e1">📝 ${item.obs}</small><br>` : ''}
-              ${item.foto ? `<img src="${item.foto}" alt="Foto Testemunho">` : ''}
-              <small style="color:#64748b; display:block; margin-top:4px;">${item.timestamp}</small>
+              <strong>${item.furo}</strong> — Manobra: ${item.profInicial}m a ${item.profFinal}m (+${item.avanco.toFixed(2)}m)<br>
+              <small><b>Acumulado: ${acm.toFixed(2)}m</b> | Caixa: Nº ${item.numCaixa} | Recup: ${item.recPerc.toFixed(1)}%</small><br>
+              <small style="color:#cbd5e1">${item.data} (${item.horaIni} - ${item.horaFim}) | ${item.obs}</small>
             </div>
           `;
           cursor.continue();
@@ -305,130 +257,86 @@
       };
     }
 
-    function obterTodosRegistros() {
-      return new Promise((resolve) => {
-        const registros = [];
+    async function obterDados() {
+      return new Promise((res) => {
+        const list = [];
         const tx = db.transaction('boletins', 'readonly');
         tx.objectStore('boletins').openCursor().onsuccess = (e) => {
           const cursor = e.target.result;
-          if (cursor) {
-            registros.push(cursor.value);
-            cursor.continue();
-          } else {
-            resolve(registros);
-          }
+          if (cursor) { list.push(cursor.value); cursor.continue(); } else { res(list); }
         };
       });
     }
 
-    // 1. GERAÇÃO DE PLANILHA EXCEL (.XLSX)
     async function gerarExcel() {
-      const dados = await obterTodosRegistros();
-      if (dados.length === 0) {
-        alert('Nenhum registro para exportar.');
-        return;
-      }
+      const dados = await obterDados();
+      if (!dados.length) return alert('Sem dados registrados.');
+      let acumulado = 0;
+      const formatted = dados.map((r, i) => {
+        acumulado += r.avanco;
+        return {
+          "Item": i + 1,
+          "Data": r.data,
+          "Horário": `${r.horaIni} - ${r.horaFim}`,
+          "Furo": r.furo,
+          "Prof. Inicial (m)": r.profInicial,
+          "Prof. Final (m)": r.profFinal,
+          "Avanço (m)": r.avanco,
+          "Acumulado (m)": acumulado,
+          "Recuperado (m)": r.recMetros,
+          "Recuperação (%)": r.recPerc / 100,
+          "Nº Caixa": r.numCaixa,
+          "Horas Paradas (h)": r.horasParado,
+          "Motivo Parada": r.motivoParada,
+          "Diesel (L)": r.diesel,
+          "Observação Litológica": r.obs
+        };
+      });
 
-      const excelData = dados.map(row => ({
-        "Data/Hora": row.timestamp,
-        "Furo": row.furo,
-        "Sonda": row.maquina,
-        "Prof. Inicial (m)": row.profInicial,
-        "Prof. Final (m)": row.profFinal,
-        "Avanço (m)": row.avanco,
-        "Barrilete": row.barrilete,
-        "Recuperação (%)": row.recuperacao,
-        "Horas Parada (h)": row.horasParado,
-        "Motivo Parada": row.motivoParada,
-        "Consumo Diesel (L)": row.diesel,
-        "Coordenadas GPS": row.coords,
-        "Observações": row.obs
-      }));
-
-      // Criar planilha
-      const ws = XLSX.utils.json_to_sheet(excelData);
-      
-      // Ajustar largura das colunas
-      ws['!cols'] = [
-        { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
-        { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
-        { wch: 18 }, { wch: 22 }, { wch: 30 }
-      ];
-
+      const ws = XLSX.utils.json_to_sheet(formatted);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Boletim de Sondagem");
-
-      XLSX.writeFile(wb, `drilldata_boletim_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Boletim Sondagem");
+      XLSX.writeFile(wb, `boletim_sondagem_${dados[0].furo}.xlsx`);
     }
 
-    // 2. GERAÇÃO DE RELATÓRIO PDF COM FOTOS
     async function gerarPDF() {
-      const dados = await obterTodosRegistros();
-      if (dados.length === 0) {
-        alert('Nenhum registro para gerar PDF.');
-        return;
-      }
+      const dados = await obterDados();
+      if (!dados.length) return alert('Sem dados registrados.');
+      
+      let acumulado = 0;
+      const body = document.getElementById('pdfTableBody');
+      body.innerHTML = '';
+      
+      const header = dados[0];
+      document.getElementById('pdfHeaderInfo').innerHTML = `
+        <b>Projeto:</b> ${header.projeto} | <b>Furo:</b> ${header.furo} | <b>Sonda:</b> ${header.maquina} | <b>Sondador:</b> ${header.sondador} | <b>Data:</b> ${header.data}
+      `;
 
-      let totalMetros = 0;
-      let totalHoras = 0;
-      let totalDiesel = 0;
-
-      const pdfBody = document.getElementById('pdfTableBody');
-      pdfBody.innerHTML = '';
-
-      dados.forEach(row => {
-        totalMetros += row.avanco;
-        totalHoras += row.horasParado;
-        totalDiesel += row.diesel;
-
-        pdfBody.innerHTML += `
+      dados.forEach((r, i) => {
+        acumulado += r.avanco;
+        body.innerHTML += `
           <tr>
-            <td>${row.timestamp}</td>
-            <td><b>${row.furo}</b></td>
-            <td>${row.maquina}</td>
-            <td>${row.profInicial}</td>
-            <td>${row.profFinal}</td>
-            <td style="color: green; font-weight: bold;">+${row.avanco}</td>
-            <td>${row.barrilete}</td>
-            <td>${row.recuperacao}%</td>
-            <td>${row.horasParado}h</td>
-            <td>
-              ${row.obs ? row.obs : ''}<br>
-              ${row.foto ? `<img src="${row.foto}" class="pdf-photo">` : ''}
-            </td>
+            <td>${i + 1}</td>
+            <td>${r.data}<br>${r.horaIni}-${r.horaFim}</td>
+            <td>${r.profInicial.toFixed(2)}</td>
+            <td>${r.profFinal.toFixed(2)}</td>
+            <td>+${r.avanco.toFixed(2)}</td>
+            <td><b>${acumulado.toFixed(2)}</b></td>
+            <td>${r.recMetros.toFixed(2)}</td>
+            <td>${r.numCaixa}</td>
+            <td>${r.horasParado}h</td>
+            <td style="text-align:left;">${r.obs}</td>
           </tr>
         `;
       });
 
-      document.getElementById('pdfTotalMetros').textContent = `Total Perfurado: ${totalMetros.toFixed(2)} m`;
-      document.getElementById('pdfTotalHoras').textContent = `Total Parado: ${totalHoras.toFixed(1)} h`;
-      document.getElementById('pdfTotalDiesel').textContent = `Consumo Diesel: ${totalDiesel.toFixed(0)} L`;
-
-      const element = document.getElementById('pdfTemplate');
-      element.style.display = 'block';
-
-      const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `boletim_sondagem_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-
-      html2pdf().set(opt).from(element).save().then(() => {
-        element.style.display = 'none';
-      });
-    }
-
-    function limparBanco() {
-      if (confirm('Deseja apagar todos os registros salvos neste dispositivo?')) {
-        const tx = db.transaction('boletins', 'readwrite');
-        tx.objectStore('boletins').clear();
-        tx.oncomplete = () => {
-          renderRecords();
-          alert('Registros apagados com sucesso.');
-        };
-      }
+      const el = document.getElementById('pdfTemplate');
+      el.style.display = 'block';
+      html2pdf().set({
+        margin: 8,
+        filename: `Boletim_${header.furo}.pdf`,
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      }).from(el).save().then(() => el.style.display = 'none');
     }
   </script>
 </body>
