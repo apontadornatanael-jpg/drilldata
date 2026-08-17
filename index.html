@@ -6,46 +6,121 @@
   <link rel="manifest" href="manifest.json">
   <title>DrillData — Praça de Sondagem</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; max-width: 480px; margin: 0 auto; }
-    h2 { color: #38bdf8; margin-bottom: 5px; }
-    .status { font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 15px; }
-    .online { background: #166534; color: #4ade80; }
-    .offline { background: #991b1b; color: #fca5a5; }
-    form { display: flex; flex-direction: column; gap: 12px; background: #1e293b; padding: 16px; border-radius: 8px; }
-    label { font-size: 0.9rem; color: #94a3b8; }
-    input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 1rem; }
-    button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-    .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 10px; margin-top: 10px; border-radius: 4px; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 16px; max-width: 500px; margin: 0 auto; }
+    h2 { color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .status { font-size: 0.8rem; padding: 6px 12px; border-radius: 20px; display: inline-block; margin-bottom: 16px; font-weight: 600; }
+    .online { background: #14532d; color: #4ade80; border: 1px solid #16a34a; }
+    .offline { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
+    form { display: flex; flex-direction: column; gap: 12px; background: #1e293b; padding: 18px; border-radius: 12px; border: 1px solid #334155; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    label { font-size: 0.85rem; color: #94a3b8; font-weight: 500; display: block; margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.95rem; box-sizing: border-box; }
+    button { background: #0284c7; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    button:active { background: #0369a1; }
+    .btn-gps { background: #334155; padding: 8px; font-size: 0.85rem; border-radius: 6px; border: 1px solid #475569; color: #38bdf8; margin-top: 4px; cursor: pointer; width: 100%; }
+    .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #334155; font-size: 0.9rem; }
+    .card strong { color: #38bdf8; }
+    .card img { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid #475569; }
+    .tag { font-size: 0.75rem; background: #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
   </style>
 </head>
 <body>
 
   <h2>⛏️ DrillData</h2>
-  <div id="netStatus" class="status online">Conectado</div>
+  <div id="netStatus" class="status online">🟢 Conectado — Pronto para sincronizar</div>
 
   <form id="drillForm">
-    <label>Número do Furo</label>
-    <input type="text" id="furo" placeholder="Ex: DDH-024" required>
+    <div class="row">
+      <div>
+        <label>Furo</label>
+        <input type="text" id="furo" placeholder="Ex: DDH-024" required>
+      </div>
+      <div>
+        <label>Sonda / Máquina</label>
+        <input type="text" id="maquina" placeholder="Ex: CS14" required>
+      </div>
+    </div>
 
-    <label>Profundidade Atual (m)</label>
-    <input type="number" step="0.1" id="profundidade" placeholder="Ex: 387.5" required>
+    <div class="row">
+      <div>
+        <label>Prof. Inicial (m)</label>
+        <input type="number" step="0.01" id="profInicial" placeholder="0.00" required>
+      </div>
+      <div>
+        <label>Prof. Final (m)</label>
+        <input type="number" step="0.01" id="profFinal" placeholder="0.00" required>
+      </div>
+    </div>
 
-    <label>Avanço Perfuração (m)</label>
-    <input type="number" step="0.1" id="avanco" placeholder="Ex: 12.0" required>
+    <div class="row">
+      <div>
+        <label>Barrilete</label>
+        <select id="barrilete">
+          <option value="HQ">HQ</option>
+          <option value="NQ">NQ</option>
+          <option value="BQ">BQ</option>
+          <option value="HQ3">HQ3</option>
+          <option value="NQ3">NQ3</option>
+        </select>
+      </div>
+      <div>
+        <label>Recuperação (%)</label>
+        <input type="number" step="1" id="recuperacao" placeholder="Ex: 95">
+      </div>
+    </div>
 
-    <button type="submit">Salvar Registro Local</button>
+    <div class="row">
+      <div>
+        <label>Horas Parado (h)</label>
+        <input type="number" step="0.5" id="horasParado" placeholder="Ex: 1.5" value="0">
+      </div>
+      <div>
+        <label>Motivo da Parada</label>
+        <select id="motivoParada">
+          <option value="Nenhuma">Nenhuma</option>
+          <option value="Manutenção Mecânica">Manutenção Mecânica</option>
+          <option value="Aguardando Água">Aguardando Água</option>
+          <option value="Chuva / Clima">Chuva / Clima</option>
+          <option value="Troca de Broca">Troca de Broca</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Diesel (L)</label>
+        <input type="number" step="1" id="diesel" placeholder="0">
+      </div>
+      <div>
+        <label>Coordenadas (GPS)</label>
+        <input type="text" id="coords" placeholder="Lat, Long" readonly>
+        <button type="button" class="btn-gps" onclick="capturarGPS()">📍 Capturar Posição</button>
+      </div>
+    </div>
+
+    <div>
+      <label>Foto da Caixa de Testemunhos</label>
+      <input type="file" id="foto" accept="image/*" capture="environment">
+    </div>
+
+    <div>
+      <label>Observações do Auxiliar/Sondador</label>
+      <textarea id="obs" rows="2" placeholder="Fraturas, perda de água, alteração da rocha..."></textarea>
+    </div>
+
+    <button type="submit">💾 Salvar Boletim no Celular</button>
   </form>
 
-  <h3>Registros Salvos no Celular</h3>
+  <h3 style="margin-top: 24px; color: #94a3b8; font-size: 1rem;">Boletins Salvos Localmente</h3>
   <div id="recordsList"></div>
 
   <script>
-    // 1. Registra o Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
 
-    // 2. Monitora Conexão
     function updateStatus() {
       const statusDiv = document.getElementById('netStatus');
       if (navigator.onLine) {
@@ -53,20 +128,42 @@
         statusDiv.textContent = '🟢 Online — Sincronização pronta';
       } else {
         statusDiv.className = 'status offline';
-        statusDiv.textContent = '🔴 Offline — Modos de campo ativado';
+        statusDiv.textContent = '🔴 Offline — Modo de Campo (IndexedDB Ativo)';
       }
     }
     window.addEventListener('online', updateStatus);
     window.addEventListener('offline', updateStatus);
     updateStatus();
 
-    // 3. Inicializa Banco Interno IndexedDB
+    // Captura GPS
+    function capturarGPS() {
+      const inputCoords = document.getElementById('coords');
+      if ('geolocation' in navigator) {
+        inputCoords.placeholder = "Obtendo GPS...";
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            inputCoords.value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+          },
+          (err) => {
+            alert('Não foi possível obter a localização. Verifique as permissões de GPS.');
+            inputCoords.placeholder = "Erro ao obter GPS";
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      } else {
+        alert('Geolocalização não suportada neste dispositivo.');
+      }
+    }
+
+    // IndexedDB setup
     let db;
-    const request = indexedDB.open('DrillDataDB', 1);
+    const request = indexedDB.open('DrillDataDB', 2);
 
     request.onupgradeneeded = (e) => {
       db = e.target.result;
-      db.createObjectStore('boletins', { keyPath: 'id', autoIncrement: true });
+      if (!db.objectStoreNames.contains('boletins')) {
+        db.createObjectStore('boletins', { keyPath: 'id', autoIncrement: true });
+      }
     };
 
     request.onsuccess = (e) => {
@@ -74,13 +171,44 @@
       renderRecords();
     };
 
-    // 4. Salva Dados no Celular (Sem precisar de internet)
-    document.getElementById('drillForm').addEventListener('submit', (e) => {
+    // Converter Imagem para Base64 para salvar no IndexedDB
+    function lerImagem(file) {
+      return new Promise((resolve) => {
+        if (!file) resolve(null);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Salvar Registro
+    document.getElementById('drillForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      const fileInput = document.getElementById('foto');
+      let fotoBase64 = null;
+      if (fileInput.files.length > 0) {
+        fotoBase64 = await lerImagem(fileInput.files[0]);
+      }
+
+      const pInicial = parseFloat(document.getElementById('profInicial').value) || 0;
+      const pFinal = parseFloat(document.getElementById('profFinal').value) || 0;
+      const avanco = (pFinal - pInicial).toFixed(2);
+
       const record = {
         furo: document.getElementById('furo').value,
-        profundidade: parseFloat(document.getElementById('profundidade').value),
-        avanco: parseFloat(document.getElementById('avanco').value),
+        maquina: document.getElementById('maquina').value,
+        profInicial: pInicial,
+        profFinal: pFinal,
+        avanco: parseFloat(avanco),
+        barrilete: document.getElementById('barrilete').value,
+        recuperacao: document.getElementById('recuperacao').value,
+        horasParado: document.getElementById('horasParado').value,
+        motivoParada: document.getElementById('motivoParada').value,
+        diesel: document.getElementById('diesel').value,
+        coords: document.getElementById('coords').value,
+        obs: document.getElementById('obs').value,
+        foto: fotoBase64,
         timestamp: new Date().toLocaleString('pt-BR')
       };
 
@@ -92,7 +220,7 @@
       };
     });
 
-    // 5. Exibe Registros Salvos
+    // Renderizar lista
     function renderRecords() {
       const list = document.getElementById('recordsList');
       list.innerHTML = '';
@@ -103,8 +231,17 @@
           const item = cursor.value;
           list.innerHTML += `
             <div class="card">
-              <strong>${item.furo}</strong> — Prof: ${item.profundidade}m | Avanço: ${item.avanco}m<br>
-              <small style="color:#94a3b8">${item.timestamp}</small>
+              <strong>${item.furo}</strong> (${item.maquina}) — <span style="color:#4ade80">+${item.avanco} m</span><br>
+              <small>De ${item.profInicial}m a ${item.profFinal}m | Barrilete: ${item.barrilete}</small><br>
+              <div style="margin: 6px 0;">
+                <span class="tag">Recup: ${item.recuperacao || 0}%</span>
+                <span class="tag">Parada: ${item.horasParado}h (${item.motivoParada})</span>
+                <span class="tag">Diesel: ${item.diesel || 0}L</span>
+              </div>
+              ${item.coords ? `<small style="color:#38bdf8">📍 GPS: ${item.coords}</small><br>` : ''}
+              ${item.obs ? `<small style="color:#cbd5e1">📝 ${item.obs}</small><br>` : ''}
+              ${item.foto ? `<img src="${item.foto}" alt="Foto Testemunho">` : ''}
+              <small style="color:#64748b; display:block; margin-top:4px;">${item.timestamp}</small>
             </div>
           `;
           cursor.continue();
