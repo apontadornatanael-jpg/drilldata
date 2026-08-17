@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DrillData — Boletim de Sondagem Mineral</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 16px; max-width: 650px; margin: 0 auto; }
     h2 { color: #38bdf8; margin-bottom: 2px; }
@@ -17,18 +15,21 @@
     input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.9rem; box-sizing: border-box; }
     button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
     .btn-gps { background: #334155; padding: 8px; font-size: 0.8rem; border-radius: 6px; border: 1px solid #475569; color: #38bdf8; margin-top: 4px; cursor: pointer; width: 100%; font-weight: bold; }
-    .btn-gps:active { background: #475569; }
     .calc-box { background: #0f172a; border: 1px solid #0284c7; padding: 10px; border-radius: 6px; text-align: center; color: #38bdf8; font-weight: bold; font-size: 0.9rem; }
     .export-box { background: #1e293b; padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
     .btn-excel { background: #15803d; }
     .btn-pdf { background: #b91c1c; }
     .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #334155; font-size: 0.85rem; }
     
-    /* Layout do PDF */
-    #pdfTemplate { display: none; background: #fff; color: #000; padding: 15px; font-family: Arial, sans-serif; }
-    #pdfTemplate table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
-    #pdfTemplate th { background: #0f172a; color: #fff; padding: 5px; border: 1px solid #cbd5e1; }
-    #pdfTemplate td { padding: 4px; border: 1px solid #cbd5e1; text-align: center; }
+    /* Estilo de Impressão Direta do PDF */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 10px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+      th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 11px; }
+      th { background-color: #0f172a !important; color: #fff !important; -webkit-print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
@@ -37,7 +38,6 @@
   <div class="subtitle">Sistema de Coleta e Emissão de Boletins Diários de Sondagem</div>
 
   <form id="drillForm">
-    <!-- Cabeçalho do Furo -->
     <div class="row">
       <div>
         <label>Projeto / Cliente</label>
@@ -74,7 +74,6 @@
       </div>
     </div>
 
-    <!-- Dados da Manobra -->
     <div class="row">
       <div>
         <label>Prof. Inicial (m)</label>
@@ -97,7 +96,6 @@
       </div>
     </div>
 
-    <!-- Indicadores Automáticos -->
     <div class="calc-box" id="displayCalc">
       Avanço: 0.00 m | Recuperação: 0.0%
     </div>
@@ -141,35 +139,14 @@
 
   <div class="export-box">
     <label style="font-weight:bold;">📄 Gerar Documentos Oficiais</label>
-    <button type="button" class="btn-excel" onclick="gerarExcel()">📊 Exportar Planilha Iluminada (.xlsx)</button>
-    <button type="button" class="btn-pdf" onclick="gerarPDF()">📄 Exportar Relatório PDF (.pdf)</button>
+    <button type="button" class="btn-excel" onclick="gerarExcel()">📊 Exportar Planilha Excel (.xls)</button>
+    <button type="button" class="btn-pdf" onclick="gerarPDF()">📄 Imprimir / Salvar PDF Oficial</button>
   </div>
 
   <h3 style="margin-top: 20px; color: #94a3b8;">Manobras Registradas</h3>
   <div id="recordsList"></div>
 
-  <!-- Template para PDF -->
-  <div id="pdfTemplate">
-    <h2 style="color:#0f172a; text-align:center; margin-bottom:5px;">DRILLDATA — BOLETIM DIÁRIO DE SONDAGEM</h2>
-    <div id="pdfHeaderInfo" style="margin-bottom:10px; font-size:10px; background:#f1f5f9; padding:8px; border-radius:4px;"></div>
-    <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Data/Hora</th>
-          <th>De (m)</th>
-          <th>Até (m)</th>
-          <th>Avanço</th>
-          <th>Acumul.</th>
-          <th>Recup.</th>
-          <th>Nº Cx</th>
-          <th>Parada</th>
-          <th>Observação Litológica</th>
-        </tr>
-      </thead>
-      <tbody id="pdfTableBody"></tbody>
-    </table>
-  </div>
+  <div id="printArea" style="display:none;"></div>
 
   <script>
     document.getElementById('dataOperacao').valueAsDate = new Date();
@@ -182,16 +159,13 @@
           (pos) => {
             inputCoords.value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
           },
-          (err) => {
-            inputCoords.placeholder = "GPS Indisponível";
-          },
+          () => { inputCoords.placeholder = "GPS Indisponível"; },
           { enableHighAccuracy: true, timeout: 10000 }
         );
       } else {
         inputCoords.placeholder = "Não suportado";
       }
     }
-    // Tenta obter o GPS automaticamente ao carregar a página
     capturarGPS();
 
     function calcularAvanco() {
@@ -290,58 +264,104 @@
       });
     }
 
+    // Exportação do Excel no formato ilumidado embutido (100% nativo do navegador)
     async function gerarExcel() {
       const dados = await obterDados();
-      if (!dados.length) return alert('Sem dados registrados.');
-      let acumulado = 0;
-      const formatted = dados.map((r, i) => {
-        acumulado += r.avanco;
-        return {
-          "Item": i + 1,
-          "Data": r.data,
-          "Horário": `${r.horaIni} - ${r.horaFim}`,
-          "Furo": r.furo,
-          "Prof. Inicial (m)": r.profInicial,
-          "Prof. Final (m)": r.profFinal,
-          "Avanço (m)": r.avanco,
-          "Acumulado (m)": acumulado,
-          "Recuperado (m)": r.recMetros,
-          "Recuperação (%)": r.recPerc / 100,
-          "Nº Caixa": r.numCaixa,
-          "Horas Paradas (h)": r.horasParado,
-          "Motivo Parada": r.motivoParada,
-          "Diesel (L)": r.diesel,
-          "GPS Coordenadas": r.coords,
-          "Observação Litológica": r.obs
-        };
-      });
+      if (!dados.length) return alert('Por favor, salve pelo menos uma manobra antes de exportar.');
 
-      const ws = XLSX.utils.json_to_sheet(formatted);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Boletim Sondagem");
-      XLSX.writeFile(wb, `boletim_sondagem_${dados[0].furo}.xlsx`);
-    }
-
-    async function gerarPDF() {
-      const dados = await obterDados();
-      if (!dados.length) return alert('Sem dados registrados.');
-      
       let acumulado = 0;
-      const body = document.getElementById('pdfTableBody');
-      body.innerHTML = '';
-      
-      const header = dados[0];
-      document.getElementById('pdfHeaderInfo').innerHTML = `
-        <b>Projeto:</b> ${header.projeto} | <b>Furo:</b> ${header.furo} | <b>Sonda:</b> ${header.maquina} | <b>Sondador:</b> ${header.sondador} | <b>Data:</b> ${header.data} <br>
-        <b>GPS:</b> ${header.coords ? header.coords : 'Não informado'}
-      `;
+      let rowsHtml = '';
 
       dados.forEach((r, i) => {
         acumulado += r.avanco;
-        body.innerHTML += `
+        rowsHtml += `
           <tr>
             <td>${i + 1}</td>
-            <td>${r.data}<br>${r.horaIni}-${r.horaFim}</td>
+            <td>${r.data}</td>
+            <td>${r.horaIni} - ${r.horaFim}</td>
+            <td>${r.furo}</td>
+            <td>${r.profInicial.toFixed(2)}</td>
+            <td>${r.profFinal.toFixed(2)}</td>
+            <td>${r.avanco.toFixed(2)}</td>
+            <td><b>${acumulado.toFixed(2)}</b></td>
+            <td>${r.recMetros.toFixed(2)}</td>
+            <td>${r.recPerc.toFixed(1)}%</td>
+            <td>${r.numCaixa}</td>
+            <td>${r.horasParado}</td>
+            <td>${r.motivoParada}</td>
+            <td>${r.diesel}</td>
+            <td>${r.coords}</td>
+            <td>${r.obs}</td>
+          </tr>
+        `;
+      });
+
+      const excelHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta charset="utf-8">
+          <style>
+            th { background-color: #0F172A; color: #FFFFFF; font-weight: bold; border: 1px solid #CBD5E1; text-align: center; }
+            td { border: 1px solid #CBD5E1; text-align: center; }
+            .title { font-size: 16pt; font-weight: bold; color: #0F172A; }
+          </style>
+        </head>
+        <body>
+          <div class="title">DRILLDATA — BOLETIM DIÁRIO DE SONDAGEM</div>
+          <br>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Data</th>
+                <th>Horário</th>
+                <th>Furo</th>
+                <th>Prof. Inicial (m)</th>
+                <th>Prof. Final (m)</th>
+                <th>Avanço (m)</th>
+                <th>Acumulado (m)</th>
+                <th>Recuperado (m)</th>
+                <th>Recuperação (%)</th>
+                <th>Nº Caixa</th>
+                <th>Horas Paradas (h)</th>
+                <th>Motivo Parada</th>
+                <th>Diesel (L)</th>
+                <th>Coordenadas GPS</th>
+                <th>Observação Litológica</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `boletim_sondagem_${dados[0].furo}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Exportação em PDF utilizando a função nativa do navegador (Salvar como PDF)
+    async function gerarPDF() {
+      const dados = await obterDados();
+      if (!dados.length) return alert('Por favor, salve pelo menos uma manobra antes de exportar.');
+
+      let acumulado = 0;
+      let rowsHtml = '';
+      const header = dados[0];
+
+      dados.forEach((r, i) => {
+        acumulado += r.avanco;
+        rowsHtml += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${r.data}<br>${r.horaIni} - ${r.horaFim}</td>
             <td>${r.profInicial.toFixed(2)}</td>
             <td>${r.profFinal.toFixed(2)}</td>
             <td>+${r.avanco.toFixed(2)}</td>
@@ -354,13 +374,37 @@
         `;
       });
 
-      const el = document.getElementById('pdfTemplate');
-      el.style.display = 'block';
-      html2pdf().set({
-        margin: 8,
-        filename: `Boletim_${header.furo}.pdf`,
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      }).from(el).save().then(() => el.style.display = 'none');
+      const printDiv = document.getElementById('printArea');
+      printDiv.style.display = 'block';
+      printDiv.innerHTML = `
+        <h2 style="text-align:center; margin-bottom:5px;">DRILLDATA — RELATÓRIO OPERACIONAL DE SONDAGEM</h2>
+        <div style="background:#f1f5f9; padding:10px; font-size:12px; margin-bottom:10px; border:1px solid #cbd5e1;">
+          <b>Projeto:</b> ${header.projeto} | <b>Furo:</b> ${header.furo} | <b>Sonda:</b> ${header.maquina} <br>
+          <b>Sondador:</b> ${header.sondador} | <b>Data:</b> ${header.data} | <b>GPS:</b> ${header.coords || 'Não informado'}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Data/Hora</th>
+              <th>De (m)</th>
+              <th>Até (m)</th>
+              <th>Avanço</th>
+              <th>Acumulado</th>
+              <th>Recup (m)</th>
+              <th>Nº Cx</th>
+              <th>Parada</th>
+              <th>Observação Litológica</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      `;
+
+      window.print();
+      printDiv.style.display = 'none';
     }
   </script>
 </body>
