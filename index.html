@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <title>DrillData — Praça de Sondagem</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; max-width: 480px; margin: 0 auto; }
+    h2 { color: #38bdf8; margin-bottom: 5px; }
+    .status { font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 15px; }
+    .online { background: #166534; color: #4ade80; }
+    .offline { background: #991b1b; color: #fca5a5; }
+    form { display: flex; flex-direction: column; gap: 12px; background: #1e293b; padding: 16px; border-radius: 8px; }
+    label { font-size: 0.9rem; color: #94a3b8; }
+    input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 1rem; }
+    button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+    .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 10px; margin-top: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <h2>⛏️ DrillData</h2>
+  <div id="netStatus" class="status online">Conectado</div>
+
+  <form id="drillForm">
+    <label>Número do Furo</label>
+    <input type="text" id="furo" placeholder="Ex: DDH-024" required>
+
+    <label>Profundidade Atual (m)</label>
+    <input type="number" step="0.1" id="profundidade" placeholder="Ex: 387.5" required>
+
+    <label>Avanço Perfuração (m)</label>
+    <input type="number" step="0.1" id="avanco" placeholder="Ex: 12.0" required>
+
+    <button type="submit">Salvar Registro Local</button>
+  </form>
+
+  <h3>Registros Salvos no Celular</h3>
+  <div id="recordsList"></div>
+
+  <script>
+    // 1. Registra o Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    // 2. Monitora Conexão
+    function updateStatus() {
+      const statusDiv = document.getElementById('netStatus');
+      if (navigator.onLine) {
+        statusDiv.className = 'status online';
+        statusDiv.textContent = '🟢 Online — Sincronização pronta';
+      } else {
+        statusDiv.className = 'status offline';
+        statusDiv.textContent = '🔴 Offline — Modos de campo ativado';
+      }
+    }
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    updateStatus();
+
+    // 3. Inicializa Banco Interno IndexedDB
+    let db;
+    const request = indexedDB.open('DrillDataDB', 1);
+
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      db.createObjectStore('boletins', { keyPath: 'id', autoIncrement: true });
+    };
+
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      renderRecords();
+    };
+
+    // 4. Salva Dados no Celular (Sem precisar de internet)
+    document.getElementById('drillForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const record = {
+        furo: document.getElementById('furo').value,
+        profundidade: parseFloat(document.getElementById('profundidade').value),
+        avanco: parseFloat(document.getElementById('avanco').value),
+        timestamp: new Date().toLocaleString('pt-BR')
+      };
+
+      const tx = db.transaction('boletins', 'readwrite');
+      tx.objectStore('boletins').add(record);
+      tx.oncomplete = () => {
+        document.getElementById('drillForm').reset();
+        renderRecords();
+      };
+    });
+
+    // 5. Exibe Registros Salvos
+    function renderRecords() {
+      const list = document.getElementById('recordsList');
+      list.innerHTML = '';
+      const tx = db.transaction('boletins', 'readonly');
+      tx.objectStore('boletins').openCursor().onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          const item = cursor.value;
+          list.innerHTML += `
+            <div class="card">
+              <strong>${item.furo}</strong> — Prof: ${item.profundidade}m | Avanço: ${item.avanco}m<br>
+              <small style="color:#94a3b8">${item.timestamp}</small>
+            </div>
+          `;
+          cursor.continue();
+        }
+      };
+    }
+  </script>
+</body>
+</html>
