@@ -1,0 +1,15 @@
+{
+  "name": "DrillData — Controle de Sondagem",
+  "short_name": "DrillData",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1e293b",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2942/2942544.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
