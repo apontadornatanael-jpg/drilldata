@@ -6,7 +6,7 @@
   <link rel="manifest" href="manifest.json">
   <title>DrillData — Praça de Sondagem</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 16px; max-width: 500px; margin: 0 auto; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 16px; max-width: 520px; margin: 0 auto; }
     h2 { color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
     .status { font-size: 0.8rem; padding: 6px 12px; border-radius: 20px; display: inline-block; margin-bottom: 16px; font-weight: 600; }
     .online { background: #14532d; color: #4ade80; border: 1px solid #16a34a; }
@@ -19,10 +19,17 @@
     button { background: #0284c7; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
     button:active { background: #0369a1; }
     .btn-gps { background: #334155; padding: 8px; font-size: 0.85rem; border-radius: 6px; border: 1px solid #475569; color: #38bdf8; margin-top: 4px; cursor: pointer; width: 100%; }
+    
+    /* Seção de Ações de Exportação / Download */
+    .export-box { background: #1e293b; padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .btn-download { background: #16a34a; color: white; padding: 12px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
+    .btn-download-json { background: #0284c7; color: white; padding: 10px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 0.85rem; }
+    .btn-clear { background: #991b1b; color: #fca5a5; padding: 8px; border-radius: 8px; font-weight: bold; border: 1px solid #dc2626; cursor: pointer; font-size: 0.8rem; margin-top: 6px; }
+
     .card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #334155; font-size: 0.9rem; }
     .card strong { color: #38bdf8; }
     .card img { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid #475569; }
-    .tag { font-size: 0.75rem; background: #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
+    .tag { font-size: 0.75rem; background: #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; margin-right: 4px; display: inline-block; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -110,8 +117,16 @@
       <textarea id="obs" rows="2" placeholder="Fraturas, perda de água, alteração da rocha..."></textarea>
     </div>
 
-    <button type="submit">💾 Salvar Boletim no Celular</button>
+    <button type="submit">💾 Salvar Registro no Dispositivo</button>
   </form>
+
+  <!-- Caixa de Downloads e Exportação -->
+  <div class="export-box">
+    <label style="color:#f8fafc; font-weight:bold;">📥 Baixar Dados Salvos (Notebook / Celular)</label>
+    <button type="button" class="btn-download" onclick="exportarCSV()">📊 Baixar Relatório Excel (CSV)</button>
+    <button type="button" class="btn-download-json" onclick="exportarJSON()">💾 Baixar Backup Completo (JSON)</button>
+    <button type="button" class="btn-clear" onclick="limparBanco()">🗑️ Apagar Registros Locais</button>
+  </div>
 
   <h3 style="margin-top: 24px; color: #94a3b8; font-size: 1rem;">Boletins Salvos Localmente</h3>
   <div id="recordsList"></div>
@@ -171,7 +186,6 @@
       renderRecords();
     };
 
-    // Converter Imagem para Base64 para salvar no IndexedDB
     function lerImagem(file) {
       return new Promise((resolve) => {
         if (!file) resolve(null);
@@ -233,7 +247,7 @@
             <div class="card">
               <strong>${item.furo}</strong> (${item.maquina}) — <span style="color:#4ade80">+${item.avanco} m</span><br>
               <small>De ${item.profInicial}m a ${item.profFinal}m | Barrilete: ${item.barrilete}</small><br>
-              <div style="margin: 6px 0;">
+              <div>
                 <span class="tag">Recup: ${item.recuperacao || 0}%</span>
                 <span class="tag">Parada: ${item.horasParado}h (${item.motivoParada})</span>
                 <span class="tag">Diesel: ${item.diesel || 0}L</span>
@@ -247,6 +261,79 @@
           cursor.continue();
         }
       };
+    }
+
+    // Função de Ajuda para Obter Todos Registros
+    function obterTodosRegistros() {
+      return new Promise((resolve) => {
+        const registros = [];
+        const tx = db.transaction('boletins', 'readonly');
+        tx.objectStore('boletins').openCursor().onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            registros.push(cursor.value);
+            cursor.continue();
+          } else {
+            resolve(registros);
+          }
+        };
+      });
+    }
+
+    // Exportar para CSV (Compatível com Excel)
+    async function exportarCSV() {
+      const dados = await obterTodosRegistros();
+      if (dados.length === 0) {
+        alert('Nenhum registro para exportar.');
+        return;
+      }
+
+      let csvContent = "\uFEFFData/Hora;Furo;Sonda;Prof Inicial (m);Prof Final (m);Avanco (m);Barrilete;Recuperacao (%);Horas Parada (h);Motivo Parada;Diesel (L);GPS;Observacoes\n";
+
+      dados.forEach(row => {
+        const obsFormatada = (row.obs || '').replace(/;/g, ',').replace(/\n/g, ' ');
+        csvContent += `"${row.timestamp}";"${row.furo}";"${row.maquina}";"${row.profInicial}";"${row.profFinal}";"${row.avanco}";"${row.barrilete}";"${row.recuperacao || 0}";"${row.horasParado || 0}";"${row.motivoParada}";"${row.diesel || 0}";"${row.coords || ''}";"${obsFormatada}"\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `boletim_sondagem_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Exportar para JSON (Backup Completo com Fotos)
+    async function exportarJSON() {
+      const dados = await obterTodosRegistros();
+      if (dados.length === 0) {
+        alert('Nenhum registro para exportar.');
+        return;
+      }
+
+      const jsonStr = JSON.stringify(dados, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_drilldata_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Limpar Banco de Dados Local
+    function limparBanco() {
+      if (confirm('Tem certeza que deseja apagar todos os registros salvos neste dispositivo? Certifique-se de ter baixado o relatório antes.')) {
+        const tx = db.transaction('boletins', 'readwrite');
+        tx.objectStore('boletins').clear();
+        tx.oncomplete = () => {
+          renderRecords();
+          alert('Registros apagados com sucesso.');
+        };
+      }
     }
   </script>
 </body>
